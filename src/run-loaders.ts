@@ -1,11 +1,12 @@
 import { LoaderCtx, Match } from './types';
 
-export const runLoaders = async (
+export const runLoaders = async <C extends Record<string, unknown>>(
   matches: Match[] | null,
   pathname: string,
   query: Record<string, unknown>,
   loaderData: { current: Record<string, unknown> } = { current: {} },
-  rootLoader?: (ctx: LoaderCtx) => Promise<unknown> | unknown,
+  rootLoader?: (ctx: LoaderCtx<C>) => Promise<unknown> | unknown,
+  context: C = {} as C,
 ) => {
   if (!matches && !rootLoader) return;
 
@@ -13,7 +14,12 @@ export const runLoaders = async (
 
   // Загружаем корневой loader если он есть
   if (rootLoader) {
-    newData['__root__'] = await rootLoader({ pathname, params: {}, query });
+    newData['__root__'] = await rootLoader({
+      pathname,
+      params: {},
+      query,
+      ...context,
+    });
   }
 
   // Loaders run sequentially — intentional: later loaders may depend on results
@@ -32,6 +38,7 @@ export const runLoaders = async (
         pathname,
         params: match.params,
         query,
+        ...context,
       });
     }
   }

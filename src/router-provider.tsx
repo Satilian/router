@@ -28,7 +28,7 @@ export const RouterProvider = memo(
     initialState = {},
     config,
   }: RouterProviderProps) {
-    const { routes, loader: rootLoader } = config;
+    const { routes, loader: rootLoader, loaderContext } = config;
 
     const [, forceRender] = useState(0);
 
@@ -84,6 +84,7 @@ export const RouterProvider = memo(
               nextQuery,
               loaderDataRef,
               rootLoader,
+              loaderContext,
             );
           } catch (e) {
             console.error('❌ [RouterProvider] navigate: loader failed', e);

@@ -70,6 +70,7 @@ export interface RouterContextType {
 export type RoutesConfigObject = {
   loader?: (ctx: LoaderCtx) => Promise<unknown> | unknown;
   routes: RouteConfig[];
+  loaderContext?: Record<string, unknown>;
 };
 
 export type RouterProviderProps = {
