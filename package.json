@@ -1,6 +1,23 @@
 {
   "name": "router",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "description": "Lightweight client-side router for React with loader support",
+  "keywords": [
+    "router",
+    "react",
+    "routing",
+    "loaders",
+    "spa"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/satilian/router.git"
+  },
+  "homepage": "https://github.com/satilian/router#readme",
+  "bugs": {
+    "url": "https://github.com/satilian/router/issues"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -33,6 +50,5 @@
   "peerDependencies": {
     "react": ">=16.9.0",
     "react-dom": ">=16.9.0"
-  },
-  "private": true
+  }
 }
