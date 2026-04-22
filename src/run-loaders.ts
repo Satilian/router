@@ -16,7 +16,10 @@ export const runLoaders = async (
     newData['__root__'] = await rootLoader({ pathname, params: {}, query });
   }
 
-  // Загружаем loaders для каждого маршрута
+  // Loaders run sequentially — intentional: later loaders may depend on results
+  // of earlier ones (e.g. a child route loader reading parent loader data).
+  // On loader error: the exception propagates to the caller; loaderData.current
+  // is NOT updated, so the previous state is preserved until a successful navigation.
   for (let i = 0; i < (matches?.length || 0); i++) {
     const match = matches![i];
     // Note: index routes (index: true) always have a parent with path due to type constraints

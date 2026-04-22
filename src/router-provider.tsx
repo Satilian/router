@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   createContext,
   memo,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -37,7 +37,7 @@ export const RouterProvider = memo(
         (typeof window !== 'undefined' ? window.location.pathname : '/'),
     );
 
-    const loaderDataRef = useRef<Record<string, any>>(initialState);
+    const loaderDataRef = useRef<Record<string, unknown>>(initialState);
     const loaderData = loaderDataRef.current;
 
     const matchesRef = useRef<Match[] | null>(initialMatches);
@@ -59,15 +59,13 @@ export const RouterProvider = memo(
       [matches],
     );
 
-    const navigate = async (
-      nextPathname: string,
-      options?: NavigateOptions,
-    ) => {
-      if (typeof window === 'undefined') return;
+    const navigate = useCallback(
+      async (nextPathname: string, options?: NavigateOptions) => {
+        if (typeof window === 'undefined') return;
 
-      try {
-        const [pathnameWithQuery, hash] = nextPathname.split('#'); // Отделяем hash
-        const [pathnamePart] = pathnameWithQuery.split('?'); // Отделяем query параметры
+        const url = new URL(nextPathname, window.location.origin);
+        const pathnamePart = url.pathname;
+        const hash = url.hash.slice(1); // strip leading '#'
 
         if (!options?.shallow) {
           if (options?.replace)
@@ -78,16 +76,19 @@ export const RouterProvider = memo(
         // If pathname changed: match routes and run loaders
         if (pathnameRef.current !== pathnamePart) {
           matchesRef.current = matchRoutes(routes, pathnamePart);
-          const query = Object.fromEntries(
-            new URLSearchParams(nextPathname).entries(),
-          );
-          await runLoaders(
-            matchesRef.current,
-            pathnamePart,
-            query,
-            loaderDataRef,
-            rootLoader,
-          );
+          const nextQuery = Object.fromEntries(url.searchParams.entries());
+          try {
+            await runLoaders(
+              matchesRef.current,
+              pathnamePart,
+              nextQuery,
+              loaderDataRef,
+              rootLoader,
+            );
+          } catch (e) {
+            console.error('❌ [RouterProvider] navigate: loader failed', e);
+            throw e;
+          }
           pathnameRef.current = pathnamePart;
         }
 
@@ -101,10 +102,9 @@ export const RouterProvider = memo(
               ?.scrollIntoView({ behavior: 'smooth' });
           else window.scrollTo(0, 0);
         }
-      } catch (e) {
-        console.error('❌ [RouterProvider] navigate', e);
-      }
-    };
+      },
+      [routes, rootLoader],
+    );
 
     const setQuery = (
       newQuery: Record<string, unknown>,
@@ -140,7 +140,7 @@ export const RouterProvider = memo(
       window.addEventListener('popstate', handler);
 
       return () => window.removeEventListener('popstate', handler);
-    }, []);
+    }, [navigate]);
 
     if (!matches) return <div>404 Matches Not Found</div>;
 
@@ -194,7 +194,7 @@ export const useLoaderData = <T,>(path?: string): T | undefined => {
   // prevMath?.route.path is safe to access for index routes
   const key = match.route.path || `${prevMath?.route.path || ''}index`;
 
-  return loaderData[key];
+  return (loaderData as Record<string, unknown>)[key] as T;
 };
 
 export const useParams = (): Record<string, string> => {

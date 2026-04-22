@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReactNode } from 'react';
 
 type RouteBase = {
   layout?: ReactNode;
-  loader?: (ctx: LoaderCtx) => Promise<any> | any;
+  loader?: (ctx: LoaderCtx) => Promise<unknown> | unknown;
   ssrCache?: SsrCacheOption;
 };
 
@@ -59,7 +58,7 @@ export interface RouterContextType {
   ) => Promise<void>;
   back: () => void;
   pathname: string;
-  loaderData: any;
+  loaderData: Record<string, unknown>;
   params: Record<string, string>;
   query: Record<string, unknown>;
   setQuery: (
@@ -69,14 +68,14 @@ export interface RouterContextType {
 }
 
 export type RoutesConfigObject = {
-  loader?: (ctx: LoaderCtx) => Promise<any> | any;
+  loader?: (ctx: LoaderCtx) => Promise<unknown> | unknown;
   routes: RouteConfig[];
 };
 
 export type RouterProviderProps = {
   pathname?: string; // для SSR
   query?: Record<string, unknown>; // для SSR
-  initialState?: Record<string, any>; // для SSR
+  initialState?: Record<string, unknown>; // для SSR
   matches?: Match[] | null; // для SSR
   config: RoutesConfigObject;
 };

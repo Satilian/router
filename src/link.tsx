@@ -1,16 +1,14 @@
-import React from 'react';
+import React, { ComponentPropsWithoutRef } from 'react';
 import { useRouter } from './router-provider';
-import { useRouterSuspenseContext } from './router-suspens';
+import { useRouterSuspenseContext } from './router-suspense';
 
 export const Link = ({
   to,
   children,
-  className,
   scrollToTop,
-}: {
+  ...rest
+}: ComponentPropsWithoutRef<'a'> & {
   to: string;
-  children: React.ReactNode;
-  className?: string;
   scrollToTop?: boolean;
 }) => {
   const setLoading = useRouterSuspenseContext();
@@ -30,7 +28,7 @@ export const Link = ({
   };
 
   return (
-    <a href={to} onClick={handleClick} className={className}>
+    <a href={to} onClick={handleClick} {...rest}>
       {children}
     </a>
   );

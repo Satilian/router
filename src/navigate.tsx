@@ -11,7 +11,7 @@ export const Navigate = ({ to, replace = false }: Props) => {
 
   useEffect(() => {
     navigate(to, { replace });
-  }, [to, replace]);
+  }, [to, replace, navigate]);
 
   // Navigate компонент не рендерит ничего видимого
   return null;

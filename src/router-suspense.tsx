@@ -9,11 +9,15 @@ import {
   useState,
 } from 'react';
 
-const RouterSuspenseContext = createContext<Dispatch<SetStateAction<boolean>> | null>(null);
+const RouterSuspenseContext = createContext<Dispatch<
+  SetStateAction<boolean>
+> | null>(null);
 
 export const useRouterSuspenseContext = () => useContext(RouterSuspenseContext);
 
-export const RouterSuspense = ({ children, fallback }: PropsWithChildren & { fallback: ReactNode }) => {
+type Props = PropsWithChildren<{ fallback: ReactNode }>;
+
+export const RouterSuspense = ({ children, fallback }: Props) => {
   const [loading, setLoading] = useState(false);
 
   return (
