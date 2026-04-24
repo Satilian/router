@@ -33,15 +33,21 @@
     "build": "rslib",
     "dev": "rslib --watch",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "rstest"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@rsbuild/plugin-react": "^1.4.6",
     "@rslib/core": "^0.21.2",
+    "@rstest/adapter-rslib": "^0.2.2",
+    "@rstest/core": "^0.9.9",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.14",
     "eslint": "^9.39.4",
     "globals": "^17.5.0",
+    "happy-dom": "^20.9.0",
     "prettier": "^3.8.2",
     "react": "^19.2.5",
     "typescript": "^6.0.2",
