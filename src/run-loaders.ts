@@ -5,7 +5,7 @@ export const runLoaders = async <C extends Record<string, unknown>>(
   pathname: string,
   query: Record<string, unknown>,
   loaderData: { current: Record<string, unknown> } = { current: {} },
-  rootLoader?: (ctx: LoaderCtx<C>) => Promise<unknown> | unknown,
+  rootLoader?: (ctx: LoaderCtx) => Promise<unknown> | unknown,
   context: C = {} as C,
 ) => {
   if (!matches && !rootLoader) return;

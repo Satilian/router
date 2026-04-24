@@ -39,11 +39,12 @@ type RoutePathChildren = {
 export type RouteConfig = RouteBase &
   (RoutePathElement | RouteIndexElement | RoutePathChildren);
 
-export type LoaderCtx<T = Record<string, unknown>> = {
+export type LoaderCtx = {
   params: Record<string, string>;
   pathname: string;
   query: Record<string, unknown>;
-} & T;
+  [key: string]: unknown;
+};
 
 export interface Match {
   route: RouteConfig;
