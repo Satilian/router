@@ -1,6 +1,7 @@
 import { expect, test } from '@rstest/core';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Outlet } from './outlet';
 import { RouterProvider, useRouter } from './router-provider';
 import type { RouteConfig } from './types';
 
@@ -98,4 +99,33 @@ test('renders 404 when no matches found', () => {
   );
 
   expect(screen.getByText('404 Matches Not Found')).toBeTruthy();
+});
+
+test('wraps all matches with top-level config layout', () => {
+  function RootLayout() {
+    return (
+      <div data-testid="root-layout">
+        <h1>Root Layout</h1>
+        <Outlet />
+      </div>
+    );
+  }
+
+  const layoutRoutes: RouteConfig[] = [
+    { path: '/', element: <div data-testid="home-page">Home</div> },
+    { path: '/users/:id', element: <div data-testid="user-page">User</div> },
+  ];
+
+  render(
+    <RouterProvider
+      pathname="/users/42"
+      config={{
+        routes: layoutRoutes,
+        layout: <RootLayout />,
+      }}
+    />,
+  );
+
+  expect(screen.getByTestId('root-layout')).toBeTruthy();
+  expect(screen.getByTestId('user-page').textContent).toBe('User');
 });

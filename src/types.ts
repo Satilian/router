@@ -72,6 +72,7 @@ export type RoutesConfigObject = {
   loader?: (ctx: LoaderCtx) => Promise<unknown> | unknown;
   routes: RouteConfig[];
   loaderContext?: Record<string, unknown>;
+  layout?: ReactNode;
 };
 
 export type RouterProviderProps = {

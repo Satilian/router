@@ -1,6 +1,6 @@
 {
   "name": "@satilian/router",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lightweight client-side router for React with loader support",
   "keywords": [
     "router",

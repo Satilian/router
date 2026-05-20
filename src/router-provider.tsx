@@ -1,5 +1,6 @@
 import {
   createContext,
+  isValidElement,
   memo,
   useCallback,
   useContext,
@@ -9,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { matchRoutes } from './match-routes';
+import { OutletProvider } from './outlet';
 import { renderMatches } from './render-matches';
 import { runLoaders } from './run-loaders';
 import type {
@@ -28,7 +30,12 @@ export const RouterProvider = memo(
     initialState = {},
     config,
   }: RouterProviderProps) {
-    const { routes, loader: rootLoader, loaderContext } = config;
+    const {
+      routes,
+      loader: rootLoader,
+      loaderContext,
+      layout: rootLayout,
+    } = config;
 
     const [, forceRender] = useState(0);
 
@@ -145,6 +152,13 @@ export const RouterProvider = memo(
 
     if (!matches) return <div>404 Matches Not Found</div>;
 
+    const renderedMatches = renderMatches(matches);
+    const content = isValidElement(rootLayout) ? (
+      <OutletProvider value={renderedMatches}>{rootLayout}</OutletProvider>
+    ) : (
+      renderedMatches
+    );
+
     return (
       <RouterContext.Provider
         value={{
@@ -158,7 +172,7 @@ export const RouterProvider = memo(
           setQuery,
         }}
       >
-        {renderMatches(matches)}
+        {content}
       </RouterContext.Provider>
     );
   },
