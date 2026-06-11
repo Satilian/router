@@ -61,6 +61,10 @@ export const RouterProvider = memo(
     );
     const query = queryRef.current;
 
+    const hashRef = useRef(
+      typeof window !== 'undefined' ? window.location.hash.slice(1) : '',
+    );
+
     const params = useMemo(
       () => matches?.reduce((acc, m) => ({ ...acc, ...m.params }), {}) || {},
       [matches],
@@ -72,7 +76,10 @@ export const RouterProvider = memo(
 
         const url = new URL(nextPathname, window.location.origin);
         const pathnamePart = url.pathname;
-        const hash = url.hash.slice(1); // strip leading '#'
+        const nextQuery = Object.fromEntries(url.searchParams.entries());
+        const nextHash = url.hash.slice(1); // strip leading '#'
+
+        hashRef.current = nextHash;
 
         if (!options?.shallow) {
           if (options?.replace)
@@ -81,9 +88,15 @@ export const RouterProvider = memo(
         }
 
         // If pathname changed: match routes and run loaders
-        if (pathnameRef.current !== pathnamePart) {
+        if (
+          pathnameRef.current !== pathnamePart ||
+          url.search.slice(1) !==
+            new URLSearchParams(
+              queryRef.current as Record<string, string>,
+            ).toString()
+        ) {
           matchesRef.current = matchRoutes(routes, pathnamePart);
-          const nextQuery = Object.fromEntries(url.searchParams.entries());
+
           try {
             await runLoaders(
               matchesRef.current,
@@ -97,16 +110,18 @@ export const RouterProvider = memo(
             console.error('❌ [RouterProvider] navigate: loader failed', e);
             throw e;
           }
+
           pathnameRef.current = pathnamePart;
+          queryRef.current = nextQuery;
         }
 
         forceRender((v) => v + 1);
 
         // Прокрутка страницы (по умолчанию true, если не указано иное)
         if (options?.scrollToTop !== false) {
-          if (hash)
+          if (nextHash)
             document
-              .getElementById(hash)
+              .getElementById(nextHash)
               ?.scrollIntoView({ behavior: 'smooth' });
           else window.scrollTo(0, 0);
         }
@@ -120,11 +135,10 @@ export const RouterProvider = memo(
     ) => {
       if (typeof window === 'undefined') return;
 
-      queryRef.current = { ...query, ...newQuery };
       const searchParams = new URLSearchParams(
-        queryRef.current as Record<string, string>,
+        newQuery as Record<string, string>,
       ).toString();
-      const nextPath = `${pathnameRef.current}?${searchParams}`;
+      const nextPath = `${pathnameRef.current}${searchParams ? `?${searchParams}` : ''}${hashRef.current ? `#${hashRef.current}` : ''}`;
 
       navigate(nextPath, options);
     };
