@@ -10,7 +10,9 @@ export const Navigate = ({ to, replace = false }: Props) => {
   const { navigate } = useRouter();
 
   useEffect(() => {
-    navigate(to, { replace });
+    void navigate(to, { replace }).catch(() => {
+      /* Provider exposes the navigation error. */
+    });
   }, [to, replace, navigate]);
 
   // Navigate компонент не рендерит ничего видимого

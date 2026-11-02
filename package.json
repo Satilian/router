@@ -1,6 +1,6 @@
 {
   "name": "@satilian/router",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "description": "Lightweight client-side router for React with loader support",
   "keywords": [
     "router",
@@ -34,7 +34,9 @@
     "dev": "rslib --watch",
     "format": "prettier --write .",
     "lint": "eslint .",
-    "test": "rstest"
+    "test": "rstest",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -54,7 +56,7 @@
     "typescript-eslint": "^8.58.1"
   },
   "peerDependencies": {
-    "react": ">=16.9.0",
-    "react-dom": ">=16.9.0"
+    "react": ">=16.14.0",
+    "react-dom": ">=16.14.0"
   }
 }

@@ -1,35 +1,47 @@
-import React, { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, MouseEvent } from 'react';
 import { useRouter } from './router-provider';
-import { useRouterSuspenseContext } from './router-suspense';
-
-export const Link = ({
-  to,
-  children,
-  scrollToTop,
-  ...rest
-}: ComponentPropsWithoutRef<'a'> & {
+export type LinkProps = ComponentPropsWithoutRef<'a'> & {
   to: string;
   scrollToTop?: boolean;
-}) => {
-  const setLoading = useRouterSuspenseContext();
+};
+export function Link({
+  to,
+  scrollToTop,
+  onClick,
+  target,
+  download,
+  children,
+  ...rest
+}: LinkProps) {
   const { navigate } = useRouter();
-
-  const handleClick = async (e: React.MouseEvent) => {
-    // Only handle left click without modifiers (Ctrl, Cmd, Shift, Alt)
-    // Allow native behavior for middle-click, right-click, Ctrl+click, etc.
-    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onClick?.(event);
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      (target && target !== '_self') ||
+      download !== undefined ||
+      new URL(to, window.location.href).origin !== window.location.origin
+    )
       return;
-    }
-
-    e.preventDefault();
-    setLoading?.(true);
-    await navigate(to, { scrollToTop });
-    setLoading?.(false);
+    event.preventDefault();
+    void navigate(to, { scrollToTop }).catch(() => {
+      /* Provider exposes the navigation error. */
+    });
   };
-
   return (
-    <a href={to} onClick={handleClick} {...rest}>
+    <a
+      {...rest}
+      href={to}
+      target={target}
+      download={download}
+      onClick={handleClick}
+    >
       {children}
     </a>
   );
-};
+}

@@ -1,28 +1,16 @@
-import {
-  createContext,
-  Dispatch,
-  PropsWithChildren,
-  ReactNode,
-  SetStateAction,
-  Suspense,
-  useContext,
-  useState,
-} from 'react';
-
-const RouterSuspenseContext = createContext<Dispatch<
-  SetStateAction<boolean>
-> | null>(null);
-
-export const useRouterSuspenseContext = () => useContext(RouterSuspenseContext);
-
-type Props = PropsWithChildren<{ fallback: ReactNode }>;
-
-export const RouterSuspense = ({ children, fallback }: Props) => {
-  const [loading, setLoading] = useState(false);
-
+import { Suspense, type PropsWithChildren, type ReactNode } from 'react';
+import { useNavigation } from './router-provider';
+export function RouterSuspense({
+  children,
+  fallback,
+}: PropsWithChildren<{ fallback: ReactNode }>) {
+  const { status } = useNavigation();
   return (
-    <RouterSuspenseContext.Provider value={setLoading}>
-      <Suspense fallback={fallback}>{loading ? fallback : children}</Suspense>
-    </RouterSuspenseContext.Provider>
+    <>
+      <div hidden={status === 'loading'}>
+        <Suspense fallback={fallback}>{children}</Suspense>
+      </div>
+      {status === 'loading' ? fallback : null}
+    </>
   );
-};
+}

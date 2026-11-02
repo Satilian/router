@@ -29,8 +29,8 @@ function Probe() {
 }
 
 const routes: RouteConfig[] = [
-  { path: '/', element: <Probe /> },
-  { path: '/users/:id', element: <Probe /> },
+  { id: 'test-1', path: '/', element: <Probe /> },
+  { id: 'test-2', path: '/users/:id', element: <Probe /> },
 ];
 
 test('navigate updates pathname', async () => {
@@ -87,7 +87,9 @@ test('popstate navigation updates pathname', async () => {
 });
 
 test('renders 404 when no matches found', () => {
-  const noMatchRoutes: RouteConfig[] = [{ path: '/known', element: <Probe /> }];
+  const noMatchRoutes: RouteConfig[] = [
+    { id: 'test-3', path: '/known', element: <Probe /> },
+  ];
 
   render(
     <RouterProvider
@@ -112,8 +114,16 @@ test('wraps all matches with top-level config layout', () => {
   }
 
   const layoutRoutes: RouteConfig[] = [
-    { path: '/', element: <div data-testid="home-page">Home</div> },
-    { path: '/users/:id', element: <div data-testid="user-page">User</div> },
+    {
+      id: 'test-4',
+      path: '/',
+      element: <div data-testid="home-page">Home</div>,
+    },
+    {
+      id: 'test-5',
+      path: '/users/:id',
+      element: <div data-testid="user-page">User</div>,
+    },
   ];
 
   render(

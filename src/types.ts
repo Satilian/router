@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 
 type RouteBase = {
+  id: string;
   layout?: ReactNode;
   loader?: (ctx: LoaderCtx) => Promise<unknown> | unknown;
   ssrCache?: SsrCacheOption;
@@ -40,6 +41,7 @@ export type RouteConfig = RouteBase &
   (RoutePathElement | RouteIndexElement | RoutePathChildren);
 
 export type LoaderCtx = {
+  signal?: AbortSignal;
   params: Record<string, string>;
   pathname: string;
   query: Record<string, unknown>;
@@ -80,6 +82,7 @@ export type RouterProviderProps = {
   query?: Record<string, unknown>; // для SSR
   initialState?: Record<string, unknown>; // для SSR
   matches?: Match[] | null; // для SSR
+  errorFallback?: (error: unknown) => ReactNode;
   config: RoutesConfigObject;
 };
 

@@ -1,7 +1,6 @@
 import {
   createContext,
   isValidElement,
-  memo,
   useCallback,
   useContext,
   useEffect,
@@ -14,223 +13,215 @@ import { OutletProvider } from './outlet';
 import { renderMatches } from './render-matches';
 import { runLoaders } from './run-loaders';
 import type {
-  Match,
   NavigateOptions,
   RouterContextType,
   RouterProviderProps,
+  RouteConfig,
 } from './types';
 
+export type NavigationState = {
+  status: 'idle' | 'loading' | 'error';
+  target?: string;
+  error?: unknown;
+};
+const NavigationContext = createContext<NavigationState>({ status: 'idle' });
 const RouterContext = createContext<RouterContextType | null>(null);
+export const useNavigation = (): NavigationState =>
+  useContext(NavigationContext);
 
-export const RouterProvider = memo(
-  function RouterProvider({
-    pathname: initialPath,
-    matches: initialMatches,
-    query: initialQuery,
-    initialState = {},
-    config,
-  }: RouterProviderProps) {
-    const {
-      routes,
-      loader: rootLoader,
-      loaderContext,
-      layout: rootLayout,
-    } = config;
-
-    const [, forceRender] = useState(0);
-
-    const pathnameRef = useRef(
-      initialPath ||
-        (typeof window !== 'undefined' ? window.location.pathname : '/'),
-    );
-
-    const loaderDataRef = useRef<Record<string, unknown>>(initialState);
-    const loaderData = loaderDataRef.current;
-
-    const matchesRef = useRef<Match[] | null>(initialMatches);
-    const matches =
-      matchesRef.current || matchRoutes(routes, pathnameRef.current);
-
-    const queryRef = useRef<Record<string, unknown>>(
-      initialQuery ||
+export function RouterProvider({
+  pathname,
+  matches,
+  query,
+  initialState,
+  config,
+  errorFallback,
+}: RouterProviderProps) {
+  useMemo(() => {
+    const ids = new Set<string>(['__root__']);
+    function validate(routes: RouteConfig[]) {
+      for (const route of routes) {
+        if (!route.id || ids.has(route.id))
+          throw new Error('Route IDs must be unique and cannot be __root__');
+        ids.add(route.id);
+        if (route.children) validate(route.children);
+      }
+    }
+    validate(config.routes);
+  }, [config.routes]);
+  const [snapshot, setSnapshot] = useState(() => {
+    const path =
+      pathname ??
+      (typeof window === 'undefined' ? '/' : window.location.pathname);
+    return {
+      pathname: path,
+      matches: matches ?? matchRoutes(config.routes, path),
+      query:
+        query ??
         Object.fromEntries(
           new URLSearchParams(
-            typeof window !== 'undefined' ? window.location.search : '',
-          ).entries(),
+            typeof window === 'undefined' ? '' : window.location.search,
+          ),
         ),
-    );
-    const query = queryRef.current;
-
-    const hashRef = useRef(
-      typeof window !== 'undefined' ? window.location.hash.slice(1) : '',
-    );
-
-    const params = useMemo(
-      () => matches?.reduce((acc, m) => ({ ...acc, ...m.params }), {}) || {},
-      [matches],
-    );
-
-    const navigate = useCallback(
-      async (nextPathname: string, options?: NavigateOptions) => {
-        if (typeof window === 'undefined') return;
-
-        const url = new URL(nextPathname, window.location.origin);
-        const pathnamePart = url.pathname;
-        const nextQuery = Object.fromEntries(url.searchParams.entries());
-        const nextHash = url.hash.slice(1); // strip leading '#'
-
-        hashRef.current = nextHash;
-
-        if (!options?.shallow) {
-          if (options?.replace)
-            window.history.replaceState({}, '', nextPathname);
-          else window.history.pushState({}, '', nextPathname);
-        }
-
-        // If pathname changed: match routes and run loaders
-        if (
-          pathnameRef.current !== pathnamePart ||
-          url.search.slice(1) !==
-            new URLSearchParams(
-              queryRef.current as Record<string, string>,
-            ).toString()
-        ) {
-          matchesRef.current = matchRoutes(routes, pathnamePart);
-
-          try {
-            await runLoaders(
-              matchesRef.current,
-              pathnamePart,
-              nextQuery,
-              loaderDataRef,
-              rootLoader,
-              loaderContext,
-            );
-          } catch (e) {
-            console.error('❌ [RouterProvider] navigate: loader failed', e);
-            throw e;
-          }
-
-          pathnameRef.current = pathnamePart;
-          queryRef.current = nextQuery;
-        }
-
-        forceRender((v) => v + 1);
-
-        // Прокрутка страницы (по умолчанию true, если не указано иное)
+      hash: typeof window === 'undefined' ? '' : window.location.hash,
+      loaderData: initialState ?? {},
+    };
+  });
+  const current = useRef(snapshot);
+  const active = useRef<AbortController | null>(null);
+  const [navigation, setNavigation] = useState<NavigationState>({
+    status: 'idle',
+  });
+  const navigate = useCallback(
+    async (to: string, options?: NavigateOptions): Promise<void> => {
+      if (typeof window === 'undefined') return;
+      const url = new URL(to, window.location.href);
+      if (url.origin !== window.location.origin) {
+        if (options?.replace) window.location.replace(url.href);
+        else window.location.assign(url.href);
+        return;
+      }
+      active.current?.abort();
+      const controller = new AbortController();
+      active.current = controller;
+      setNavigation({ status: 'loading', target: url.href });
+      const nextMatches = matchRoutes(config.routes, url.pathname);
+      const nextQuery = Object.fromEntries(url.searchParams);
+      const data = { current: current.current.loaderData };
+      try {
+        await runLoaders(
+          nextMatches,
+          url.pathname,
+          nextQuery,
+          data,
+          config.loader,
+          config.loaderContext,
+          controller.signal,
+        );
+        if (active.current !== controller || controller.signal.aborted) return;
+        if (!options?.shallow)
+          window.history[options?.replace ? 'replaceState' : 'pushState'](
+            {},
+            '',
+            url.href,
+          );
+        const next = {
+          pathname: url.pathname,
+          matches: nextMatches,
+          query: nextQuery,
+          hash: url.hash,
+          loaderData: data.current,
+        };
+        current.current = next;
+        setSnapshot(next);
+        setNavigation({ status: 'idle' });
         if (options?.scrollToTop !== false) {
-          if (nextHash)
-            document
-              .getElementById(nextHash)
-              ?.scrollIntoView({ behavior: 'smooth' });
+          if (url.hash)
+            document.getElementById(url.hash.slice(1))?.scrollIntoView();
           else window.scrollTo(0, 0);
         }
-      },
-      [routes, rootLoader],
-    );
-
-    const setQuery = (
-      newQuery: Record<string, unknown>,
-      options?: NavigateOptions,
-    ) => {
-      if (typeof window === 'undefined') return;
-
-      const searchParams = new URLSearchParams(
-        newQuery as Record<string, string>,
-      ).toString();
-      const nextPath = `${pathnameRef.current}${searchParams ? `?${searchParams}` : ''}${hashRef.current ? `#${hashRef.current}` : ''}`;
-
-      navigate(nextPath, options);
-    };
-
-    const back = () => {
-      if (typeof window !== 'undefined') {
-        window.history.back();
+      } catch (error) {
+        if (controller.signal.aborted || active.current !== controller) return;
+        if (options?.shallow) {
+          const next = {
+            pathname: url.pathname,
+            matches: nextMatches,
+            query: nextQuery,
+            hash: url.hash,
+            loaderData: {},
+          };
+          current.current = next;
+          setSnapshot(next);
+        }
+        setNavigation({ status: 'error', target: url.href, error });
+        throw error;
       }
+    },
+    [config.routes, config.loader, config.loaderContext],
+  );
+  useEffect(() => {
+    const handler = () => {
+      void navigate(window.location.href, { shallow: true }).catch(() => {
+        /* Error is exposed through navigation state. */
+      });
     };
-
-    // Обработчик для кнопок "Назад" и "Вперед" в браузере
-    useEffect(() => {
-      const handler = () => {
-        const fullPath =
-          window.location.pathname +
-          window.location.search +
-          window.location.hash;
-        navigate(fullPath, { shallow: true });
-      };
-
-      window.addEventListener('popstate', handler);
-
-      return () => window.removeEventListener('popstate', handler);
-    }, [navigate]);
-
-    if (!matches) return <div>404 Matches Not Found</div>;
-
-    const renderedMatches = renderMatches(matches);
-    const content = isValidElement(rootLayout) ? (
-      <OutletProvider value={renderedMatches}>{rootLayout}</OutletProvider>
-    ) : (
-      renderedMatches
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [navigate]);
+  const initialized = useRef(initialState !== undefined);
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      void navigate(window.location.href, {
+        shallow: true,
+        scrollToTop: false,
+      }).catch(() => {
+        /* Error is exposed through navigation state. */
+      });
+    }
+    return () => {
+      active.current?.abort();
+      if (initialState === undefined) initialized.current = false;
+    };
+  }, [navigate, initialState]);
+  const params = Object.assign(
+    {},
+    ...(snapshot.matches ?? []).map((match) => match.params),
+  ) as Record<string, string>;
+  const setQuery: RouterContextType['setQuery'] = (value, options) => {
+    const search = new URLSearchParams(
+      Object.entries(value).map(([key, item]) => [key, String(item)]),
+    ).toString();
+    return navigate(
+      current.current.pathname +
+        (search ? '?' + search : '') +
+        current.current.hash,
+      options,
     );
-
-    return (
+  };
+  const rendered = snapshot.matches ? (
+    renderMatches(snapshot.matches)
+  ) : (
+    <div>404 Matches Not Found</div>
+  );
+  const content =
+    navigation.status === 'error' ? (
+      (errorFallback?.(navigation.error) ?? (
+        <div role="alert">Navigation failed</div>
+      ))
+    ) : isValidElement(config.layout) ? (
+      <OutletProvider value={rendered}>{config.layout}</OutletProvider>
+    ) : (
+      rendered
+    );
+  return (
+    <NavigationContext.Provider value={navigation}>
       <RouterContext.Provider
         value={{
-          matches,
-          navigate,
-          pathname: pathnameRef.current,
-          loaderData,
+          ...snapshot,
           params,
-          back,
-          query,
+          navigate,
           setQuery,
+          back: () => window.history.back(),
         }}
       >
         {content}
       </RouterContext.Provider>
-    );
-  },
-  () => false,
-);
+    </NavigationContext.Provider>
+  );
+}
 
-export const useRouter = () => {
-  const ctx = useContext(RouterContext);
-  if (!ctx) throw new Error('useRouter must be used inside RouterProvider');
-  return ctx;
-};
-
-export const useLoaderData = <T,>(path?: string): T | undefined => {
+export function useRouter(): RouterContextType {
+  const context = useContext(RouterContext);
+  if (!context) throw new Error('useRouter must be used inside RouterProvider');
+  return context;
+}
+export function useLoaderData<T>(id?: string): T | undefined {
   const { matches, loaderData } = useRouter();
-  let prevMath;
-  let match;
-  if (path)
-    matches?.find((m, i) => {
-      if (m.route.path === path) {
-        match = m;
-        prevMath = matches[i - 1];
-        return true;
-      }
-      return false;
-    });
-  else {
-    match = matches?.[matches.length - 1];
-    prevMath = matches?.[matches.length - 2];
-  }
-
-  if (!match) return undefined;
-
-  // Index routes always have a parent with path due to type constraints.
-  // prevMath?.route.path is safe to access for index routes
-  const key = match.route.path || `${prevMath?.route.path || ''}index`;
-
-  return (loaderData as Record<string, unknown>)[key] as T;
-};
-
-export const useParams = (): Record<string, string> => {
-  const { params } = useRouter();
-  return params;
-};
-
+  const key = id ?? matches?.[matches.length - 1]?.route.id;
+  return key === undefined ? undefined : (loaderData[key] as T | undefined);
+}
+export const useParams = (): Record<string, string> => useRouter().params;
 export const useSearchParams = () => {
   const { query, setQuery } = useRouter();
   return [query, setQuery] as const;

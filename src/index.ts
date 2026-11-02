@@ -5,6 +5,7 @@ export { Outlet } from './outlet';
 export {
   RouterProvider,
   useLoaderData,
+  useNavigation,
   useParams,
   useRouter,
   useSearchParams,
@@ -13,3 +14,6 @@ export { runLoaders } from './run-loaders';
 export { RouterSuspense } from './router-suspense';
 
 export type * from './types';
+
+export type { NavigationState } from './router-provider';
+export type { LinkProps } from './link';

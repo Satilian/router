@@ -12,7 +12,12 @@ test('updates loaderData on successful loaders', async () => {
 
   const matches: Match[] = [
     makeMatch(
-      { path: '/users/:id', element: 'user', loader: (ctx) => ctx.params.id },
+      {
+        id: 'test-1',
+        path: '/users/:id',
+        element: 'user',
+        loader: (ctx) => ctx.params.id,
+      },
       {
         id: '7',
       },
@@ -22,7 +27,7 @@ test('updates loaderData on successful loaders', async () => {
   await runLoaders(matches, '/users/7', { page: '1' }, loaderData);
 
   expect(loaderData.current).toEqual({
-    '/users/:id': '7',
+    'test-1': '7',
   });
 });
 
@@ -33,6 +38,7 @@ test('keeps previous loaderData when loader throws', async () => {
 
   const matches: Match[] = [
     makeMatch({
+      id: 'test-2',
       path: '/users/:id',
       element: 'user',
       loader: () => {
@@ -53,7 +59,12 @@ test('runs root loader and route loader together', async () => {
 
   const matches: Match[] = [
     makeMatch(
-      { path: '/users/:id', element: 'user', loader: (ctx) => ctx.params.id },
+      {
+        id: 'test-3',
+        path: '/users/:id',
+        element: 'user',
+        loader: (ctx) => ctx.params.id,
+      },
       {
         id: '9',
       },
@@ -70,6 +81,6 @@ test('runs root loader and route loader together', async () => {
 
   expect(loaderData.current).toEqual({
     __root__: '/users/9:abc',
-    '/users/:id': '9',
+    'test-3': '9',
   });
 });

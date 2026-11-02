@@ -3,21 +3,23 @@ import { matchRoutes } from './match-routes';
 import type { RouteConfig } from './types';
 
 const routes: RouteConfig[] = [
-  { path: '/users/new', element: 'new user page' },
-  { path: '/users/:id', element: 'user details page' },
+  { id: 'test-1', path: '/users/new', element: 'new user page' },
+  { id: 'test-2', path: '/users/:id', element: 'user details page' },
   {
+    id: 'test-3',
     path: '/',
     children: [
       {
+        id: 'test-4',
         path: 'dashboard',
         children: [
-          { index: true, element: 'dashboard index' },
-          { path: 'settings', element: 'dashboard settings' },
+          { id: 'test-5', index: true, element: 'dashboard index' },
+          { id: 'test-6', path: 'settings', element: 'dashboard settings' },
         ],
       },
     ],
   },
-  { path: '*', element: 'fallback page' },
+  { id: 'test-7', path: '*', element: 'fallback page' },
 ];
 
 test('prefers static route over dynamic route', () => {

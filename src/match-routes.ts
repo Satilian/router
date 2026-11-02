@@ -1,78 +1,54 @@
-import { Match, RouteConfig } from './types';
+import type { Match, RouteConfig } from './types';
 
-function trim(path?: string) {
-  return path?.replace(/^\/+|\/+$/g, '');
-}
+const segments = (path: string) => path.split('/').filter(Boolean);
 
-export function matchRoutes(routes: RouteConfig[], pathname: string): Match[] | null {
-  const segments = trim(pathname)?.split('/') || [];
-  return matchRecursive(routes, segments);
-}
-
-function matchRecursive(routes: RouteConfig[], segments: string[]): Match[] | null {
-  const sorted = [...routes].sort((a, b) => getWeight(a) - getWeight(b));
-
-  for (const route of sorted) {
-    const isIndex = route.index === true;
-    const params: Record<string, string> = {};
-    let matched = false;
-
-    if (isIndex && !segments[0] && route.element) return [{ route, params }];
-
-    const pathSegments = trim(route.path)?.split('/') || [];
-
-    pathSegments.every((item, i) => {
-      if (segments[i] === undefined) {
-        matched = false;
-        return false;
+export function matchRoutes(
+  routes: RouteConfig[],
+  pathname: string,
+): Match[] | null {
+  const input = segments(pathname);
+  const candidates: { matches: Match[]; score: number[] }[] = [];
+  function visit(
+    items: RouteConfig[],
+    offset: number,
+    parents: Match[],
+    score: number[],
+  ) {
+    for (const route of items) {
+      const parts = segments(route.path ?? '');
+      const params: Record<string, string> = {};
+      let cursor = offset;
+      const rank = [...score];
+      let valid = true;
+      for (const part of parts) {
+        if (part === '*') {
+          cursor = input.length;
+          rank.push(1);
+          break;
+        }
+        const value = input[cursor];
+        if (value === undefined || (!part.startsWith(':') && part !== value)) {
+          valid = false;
+          break;
+        }
+        if (part.startsWith(':')) params[part.slice(1)] = value;
+        rank.push(part.startsWith(':') ? 2 : 3);
+        cursor++;
       }
-      const { matched: itemMatched, params: paramMatch } = matchSegment(item, segments[i]);
-      matched = itemMatched;
-      Object.assign(params, paramMatch);
-
-      return matched;
-    });
-
-    if (!matched) continue;
-
-    const remaining = segments.slice(pathSegments.length);
-
-    if (route.children) {
-      const childMatch = matchRecursive(route.children, route.path === '/' ? segments : remaining);
-      if (childMatch) return [{ route, params }, ...childMatch];
+      if (!valid) continue;
+      const matches = [...parents, { route, params }];
+      if (route.children) visit(route.children, cursor, matches, rank);
+      else if (cursor === input.length && (!route.index || cursor === offset))
+        candidates.push({ matches, score: [...rank, route.index ? 2 : 0] });
     }
-
-    const matchRemaining = remaining.length !== 0 && route.path !== '*';
-
-    if (!route.children && route.element && !matchRemaining) return [{ route, params }];
   }
-
-  return null;
+  visit(routes, 0, [], []);
+  candidates.sort((a, b) => {
+    for (let i = 0; i < Math.max(a.score.length, b.score.length); i++) {
+      const difference = (b.score[i] ?? 0) - (a.score[i] ?? 0);
+      if (difference) return difference;
+    }
+    return 0;
+  });
+  return candidates[0]?.matches ?? null;
 }
-
-function matchSegment(
-  routePath: string | undefined,
-  segment: string,
-): { matched: boolean; params: Record<string, string> } {
-  if (routePath === '') return { matched: true, params: {} };
-
-  if (!routePath) return { matched: false, params: {} };
-
-  if (routePath === '*') return { matched: true, params: {} };
-
-  if (routePath.startsWith(':')) {
-    const paramMatch = routePath.slice(1);
-    if (paramMatch) return { matched: true, params: { [paramMatch]: segment } };
-  }
-
-  return { matched: routePath === segment, params: {} };
-}
-
-const getWeight = (r: RouteConfig): number => {
-  if (r.index) return 0;
-  if (r.path === '/') return 2;
-  if (r.path?.startsWith('/:')) return 3;
-  if (r.path?.startsWith(':')) return 3;
-  if (r.path === '*') return 4;
-  return 1;
-};

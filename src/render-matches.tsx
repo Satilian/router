@@ -5,8 +5,8 @@ import { OutletProvider } from './outlet';
 export function renderMatches(matches: Match[] = []): React.ReactNode {
   return matches.reduceRight<React.ReactNode>((child, match) => {
     const { layout, element } = match.route;
-    const node = element || child;
-    const routeKey = match.route.path || 'index';
+    const node = element ?? child;
+    const routeKey = match.route.id;
 
     if (React.isValidElement(layout)) {
       return (
